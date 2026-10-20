@@ -339,33 +339,55 @@ self.onmessage = function (ev) {
 
   function paramSummary() { return 'downsampling=' + $('skipInput').value + ', tau=' + $('tauInput').value + ', exponent=' + $('expInput').value + ', invert=' + ($('invertCheck').checked ? 'on' : 'off') + ', final time=' + $('finalTimeInput').value + ', steps=' + $('maxStepsInput').value; }
 
+
+  // Set to true only if you want the OS share sheet (which cannot carry a recipient).
+  var USE_SHARE_SHEET = false;
+
   function submitToGallery() {
     if (!lastResult) { setStatus('Run mooijfy first.'); return; }
-    var name = $('submitName').value.trim(), comment = $('submitComment').value.trim();
-    var stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    var slug = name ? name.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' : '';
-    var fname = 'mooijfy_' + slug + stamp + '.png';
+
+    var name    = $('submitName').value.trim();
+    var comment = $('submitComment').value.trim();
+    var stamp   = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    var slug    = name ? name.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' : '';
+    var fname   = 'mooijfy_' + slug + stamp + '.png';
+
     var subject = 'mooijfy gallery submission' + (name ? ' - ' + name : '');
-    var body = 'Name: ' + (name || '(not given)') + '\nComment: ' + (comment || '(none)') + '\n\nParameters: ' + paramSummary() + '\n\nPlease attach: ' + fname + '\n(File saved to downloads.)\n';
+    var body =
+      'Name: ' + (name || '(not given)') + '\n' +
+      'Comment: ' + (comment || '(none)') + '\n\n' +
+      'Parameters: ' + paramSummary() + '\n\n' +
+      'Please attach: ' + fname + '\n' +
+      '(The file was saved to the sender\u2019s downloads folder.)\n';
+
     canvasToBlob($('outputCanvas')).then(function (blob) {
-      var file = null; try { file = new File([blob], fname, { type: 'image/png' }); } catch (e) {}
-      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: subject, text: body }).then(function () { setStatus('Shared with mail app.'); }).catch(function (err) { if (err && err.name === 'AbortError') return; fallbackMail(blob, fname, subject, body); });
-        return;
+
+      // Optional: OS share sheet. Off by default because it cannot set a recipient.
+      if (USE_SHARE_SHEET) {
+        var file = null;
+        try { file = new File([blob], fname, { type: 'image/png' }); } catch (e) {}
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: subject, text: body })
+            .then(function () { setStatus('Shared with your mail app.'); })
+            .catch(function (err) {
+              if (err && err.name === 'AbortError') return;
+              sendByEmail(blob, fname, subject, body);
+            });
+          return;
+        }
       }
-      fallbackMail(blob, fname, subject, body);
+
+      sendByEmail(blob, fname, subject, body);
     });
   }
 
-  // FIXED: Direct mailto with hardcoded email - no variable lookup
-  function fallbackMail(blob, fname, subject, body) {
+  function sendByEmail(blob, fname, subject, body) {
     downloadBlob(blob, fname);
-    // Build mailto URL with hardcoded recipient - tested format
-    var mailto = 'mailto:' + RECIPIENT_EMAIL + '?' +
-                 'subject=' + encodeURIComponent(subject) + '&' +
-                 'body=' + encodeURIComponent(body);
-    console.log('Opening mailto:', mailto);
-    window.location.href = mailto;
+    window.location.href = 'mailto:' + RECIPIENT_EMAIL +
+      '?subject=' + encodeURIComponent(subject) +
+      '&body='    + encodeURIComponent(body);
+    setStatus('Saved <strong>' + fname + '</strong> \u2014 attach it to the ' +
+              'email that just opened.');
   }
 
   // --- Gallery functions ---
