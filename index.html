@@ -118,12 +118,9 @@
     <div class="colorbar" id="colorbar"></div><span id="cbHi">1</span></div>
 
   <div class="panel" style="margin-top:20px">
-    <h2>To submit to the gallery via email</h2>
-    <div class="row-inline"><label>Your name:</label>
-      <input type="text" id="submitName" placeholder="optional"></div>
-    <div class="row-inline"><label>Short comment:</label>
-      <input type="text" id="submitComment" maxlength="140" placeholder="optional"></div>
-    <div class="row"><button id="submitBtn" type="button">Send to gallery</button></div>
+    <h2>Share</h2>
+    <div class="row"><button id="submitBtn" type="button">Share</button></div>
+    To submit to the gallery, email to mooijfy@protonmail.ch with a name/comment.
   </div>
 
   <div class="panel">
@@ -341,22 +338,20 @@ self.onmessage = function (ev) {
 
 
   // Set to true only if you want the OS share sheet (which cannot carry a recipient).
-  var USE_SHARE_SHEET = false;
+  var USE_SHARE_SHEET = true;
 
   function submitToGallery() {
     if (!lastResult) { setStatus('Run mooijfy first.'); return; }
 
-    var name    = $('submitName').value.trim();
-    var comment = $('submitComment').value.trim();
+    
+    var stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    var slug = name ? name.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' : '';
+    var fname = 'mooijfy_result.png';
+    
     var stamp   = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    var slug    = name ? name.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' : '';
-    var fname   = 'mooijfy_' + slug + stamp + '.png';
-
-    var subject = 'mooijfy gallery submission' + (name ? ' - ' + name : '');
-    var body =
-      'Name: ' + (name || '(not given)') + '\n' +
-      'Comment: ' + (comment || '(none)') + '\n\n' +
-      'Please save and attach your image here \n';
+  
+    var subject = 'mooijfy gallery submission';
+    var body = 'Look at this mooijfied image!\n';
       
 
     canvasToBlob($('outputCanvas')).then(function (blob) {
