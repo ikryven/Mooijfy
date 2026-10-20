@@ -118,7 +118,7 @@
     <div class="colorbar" id="colorbar"></div><span id="cbHi">1</span></div>
 
   <div class="panel" style="margin-top:20px">
-    <h2>Submit to the gallery</h2>
+    <h2>To submit to the gallery, mail to mooijfy@protonmail.ch</h2>
     <div class="row-inline"><label>Your name:</label>
       <input type="text" id="submitName" placeholder="optional"></div>
     <div class="row-inline"><label>Short comment:</label>
@@ -356,9 +356,8 @@ self.onmessage = function (ev) {
     var body =
       'Name: ' + (name || '(not given)') + '\n' +
       'Comment: ' + (comment || '(none)') + '\n\n' +
-      'Parameters: ' + paramSummary() + '\n\n' +
-      'Please attach: ' + fname + '\n' +
-      '(The file was saved to the sender\u2019s downloads folder.)\n';
+      'Please save and attach your image here \n';
+      
 
     canvasToBlob($('outputCanvas')).then(function (blob) {
 
