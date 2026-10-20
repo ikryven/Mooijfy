@@ -1,0 +1,14 @@
+{
+  "images": [
+    {
+      "file": "niek_tau1.1.png",
+      "name": "Niek",
+      "comment": "tau = 1.1, exponent 10"
+    },
+    {
+      "file": "anna_exponent5.png",
+      "name": "Anna",
+      "comment": "soft edges, came out great"
+    }
+  ]
+}
