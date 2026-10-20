@@ -349,7 +349,7 @@ self.onmessage = function (ev) {
     var stamp   = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   
     var subject = 'mooijfy gallery submission';
-    var body = 'Look at this mooijfied image!\n To submit to the gallery, email to mooijfy@protonmail.ch with a name/comment.';
+    var body = 'Look at this mooijfied image!\n To submit to the gallery, email to mooijfy@protonmail.ch with a name/comment. Make sure the image size is chosen to be Large or Actual size.';
       
 
     canvasToBlob($('outputCanvas')).then(function (blob) {
