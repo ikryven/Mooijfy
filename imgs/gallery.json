@@ -1,14 +1,13 @@
 {
   "images": [
     {
-      "file": "niek_tau1.1.png",
+      "file": "niek.jpg",
       "name": "Niek",
-      "comment": "tau = 1.1, exponent 10"
     },
     {
-      "file": "anna_exponent5.png",
-      "name": "Anna",
-      "comment": "soft edges, came out great"
+      "file": "sheep.png",
+      "name": "Utrecht Science Park",
+      "comment": "with the view on BBG"
     }
   ]
 }
