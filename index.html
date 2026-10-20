@@ -118,9 +118,7 @@
     <div class="colorbar" id="colorbar"></div><span id="cbHi">1</span></div>
 
   <div class="panel" style="margin-top:20px">
-    <h2>Share</h2>
     <div class="row"><button id="submitBtn" type="button">Share</button></div>
-    To submit to the gallery, email to mooijfy@protonmail.ch with a name/comment.
   </div>
 
   <div class="panel">
@@ -351,7 +349,7 @@ self.onmessage = function (ev) {
     var stamp   = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   
     var subject = 'mooijfy gallery submission';
-    var body = 'Look at this mooijfied image!\n';
+    var body = 'Look at this mooijfied image!\n To submit to the gallery, email to mooijfy@protonmail.ch with a name/comment.';
       
 
     canvasToBlob($('outputCanvas')).then(function (blob) {
