@@ -1,11 +1,514 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My GitHub Page</title>
+<meta charset="UTF-8">
+<title>Image Dynamics Simulation</title>
+<style>
+  body { font-family: system-ui, Arial, sans-serif; padding: 20px; background:#f5f5f5; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .controls { background:#fff; padding:16px; border-radius:8px; margin-bottom:16px; }
+  .row { margin:9px 0; }
+  label { display:inline-block; width:170px; }
+  input[type=number] { width:90px; padding:4px; }
+  button { padding:9px 18px; background:#6d4aff; color:#fff; border:none;
+           border-radius:5px; cursor:pointer; font-size:14px; margin-right:8px; }
+  button:hover:not(:disabled) { background:#5a3ad6; }
+  button:disabled { background:#bbb; cursor:default; }
+  .status { margin:12px 0; color:#444; font-weight:600; min-height:1.2em; }
+  .hint { font-size:12px; color:#777; margin-left:8px; font-weight:400; }
+  .dropzone { border:2px dashed #c9c2ee; border-radius:8px; padding:10px;
+              text-align:center; color:#888; font-size:13px; margin:10px 0;
+              transition:background .15s,border-color .15s; }
+  .dropzone.hover { background:#f0ecff; border-color:#6d4aff; color:#6d4aff; }
+  .progress-wrap { height:14px; background:#e6e6ee; border-radius:7px;
+                   overflow:hidden; margin:12px 0 5px; display:none; }
+  .progress-wrap.active { display:block; }
+  .progress-fill { height:100%; width:0%;
+                   background:linear-gradient(90deg,#6d4aff,#a58bff); }
+  .progress-text { font-size:12px; color:#555; min-height:1.1em; }
+  #inputCanvas { display:none; }
+  #outputCanvas { border:1px solid #ccc; background:#fff; display:block;
+                  image-rendering:pixelated; max-width:100%; }
+  .cbwrap { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; }
+  .colorbar { height:18px; flex:1; border-radius:3px; border:1px solid #ddd; }
+</style>
 </head>
 <body>
-    <h1>Helllo, Mooijfy algorithm will be here soon.</h1>
-   
+<div class="container">
+  <h1>Image Dynamics Simulation</h1>
+
+  <div class="controls">
+    <div class="row">
+      <label>Image:</label>
+      <input type="file" id="imageInput" accept="image/*">
+      <button id="niekBtn" type="button">Use Niek's photo</button>
+    </div>
+    <div class="row"><label>Skip (resolution):</label>
+      <input type="number" id="skipInput" value="10" min="1" max="100"></div>
+    <div class="row"><label>Tau:</label>
+      <input type="number" id="tauInput" value="1.1" step="0.05" min="0"></div>
+    <div class="row"><label>Final time:</label>
+      <input type="number" id="finalTimeInput" value="18" step="1" min="0.1"></div>
+    <div class="row"><label>Integration steps:</label>
+      <input type="number" id="maxStepsInput" value="720" step="120" min="10">
+      <small>&nbsp;(dt = finalTime / steps)</small></div>
+    <div class="row"><button id="runBtn">Run Simulation</button></div>
+  </div>
+
+  <div class="dropzone" id="dropzone">
+    Drag an image here &mdash; or drop <strong>Niek.jpg</strong> straight from your folder
+  </div>
+
+  <div class="status" id="status">Loading&hellip;</div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="progress-text" id="progressText"></div>
+
+  <canvas id="inputCanvas" width="440" height="330"></canvas>
+  <canvas id="outputCanvas" width="700" height="520"></canvas>
+
+  <div class="cbwrap"><span id="cbLo">0</span>
+    <div class="colorbar" id="colorbar"></div><span id="cbHi">1</span></div>
+</div>
+
+<!-- ---------- WORKER SOURCE ---------- -->
+<script id="workerSrc" type="text/plain">
+var PARULA = [
+  [0.00,  53,  42, 135],[0.07,  31,  63, 156],[0.15,  18,  89, 171],
+  [0.24,  10, 115, 173],[0.34,   9, 141, 157],[0.45,  28, 162, 126],
+  [0.56,  74, 178,  90],[0.67, 133, 190,  51],[0.78, 192, 199,  25],
+  [0.88, 231, 216,  16],[0.95, 246, 238,  11],[1.00, 248, 253,   7]
+];
+
+function post(m) { self.postMessage(m); }
+
+function deriv(y, out, n, nA, mA, tau) {
+  for (var i = 0; i < n; i++) {
+    var row = (i / nA) | 0;
+    var col = i - row * nA;
+    var s = 0;
+    if (row > 0)      s += y[i - nA];
+    if (row < mA - 1) s += y[i + nA];
+    if (col > 0)      s += y[i - 1];
+    if (col < nA - 1) s += y[i + 1];
+    var Ax = tau * s + y[i];
+    out[i] = y[i] - y[i] * Ax;
+  }
+}
+
+self.onmessage = function (ev) {
+  var d = ev.data;
+  var t0 = performance.now();
+  try {
+    var skip = d.skip, tau = d.tau, T = d.finalTime, steps = d.maxSteps;
+    var w = d.width, h = d.height, px = d.pixels;
+
+    post({ type: 'progress', pct: 2, label: 'Converting to grayscale' });
+
+    var gray = new Float64Array(w * h);
+    for (var p = 0, i = 0; i < gray.length; i++, p += 4) {
+      gray[i] = 0.299 * px[p] + 0.587 * px[p + 1] + 0.114 * px[p + 2];
+    }
+
+    var mA = Math.floor((h - 1) / skip) + 1;
+    var nA = Math.floor((w - 1) / skip) + 1;
+    post({ type: 'progress', pct: 5,
+           label: 'Downsampling to ' + mA + ' x ' + nA });
+
+    var A = new Float64Array(mA * nA);
+    var mx = 0;
+    for (var r = 0; r < mA; r++) {
+      var sy = Math.min(r * skip, h - 2);
+      var y0 = sy | 0, fy = sy - y0, y1 = y0 + 1;
+      for (var c = 0; c < nA; c++) {
+        var sx = Math.min(c * skip, w - 2);
+        var x0 = sx | 0, fx = sx - x0, x1 = x0 + 1;
+        var v =
+          gray[y0 * w + x0] * (1 - fx) * (1 - fy) +
+          gray[y0 * w + x1] * fx * (1 - fy) +
+          gray[y1 * w + x0] * (1 - fx) * fy +
+          gray[y1 * w + x1] * fx * fy;
+        A[r * nA + c] = v;
+        if (v > mx) mx = v;
+      }
+    }
+
+    var n = mA * nA;
+    var y = new Float64Array(n);
+    for (var k = 0; k < n; k++) {
+      var norm = mx > 0 ? A[k] / mx : 0;
+      y[k] = Math.pow(1 - norm, 10);
+    }
+
+    post({ type: 'progress', pct: 8, label: 'Integrating' });
+
+    var dt = T / steps;
+    var k1 = new Float64Array(n), k2 = new Float64Array(n),
+        k3 = new Float64Array(n), k4 = new Float64Array(n),
+        tmp = new Float64Array(n);
+    var blown = false;
+    var reportEvery = Math.max(1, Math.floor(steps / 60));
+
+    for (var s = 0; s < steps; s++) {
+      deriv(y, k1, n, nA, mA, tau);
+      for (var a = 0; a < n; a++) tmp[a] = y[a] + 0.5 * dt * k1[a];
+      deriv(tmp, k2, n, nA, mA, tau);
+      for (var b = 0; b < n; b++) tmp[b] = y[b] + 0.5 * dt * k2[b];
+      deriv(tmp, k3, n, nA, mA, tau);
+      for (var c2 = 0; c2 < n; c2++) tmp[c2] = y[c2] + dt * k3[c2];
+      deriv(tmp, k4, n, nA, mA, tau);
+
+      for (var q = 0; q < n; q++) {
+        y[q] += (dt / 6) * (k1[q] + 2 * k2[q] + 2 * k3[q] + k4[q]);
+        if (!isFinite(y[q])) { blown = true; break; }
+      }
+      if (blown) break;
+
+      if (s % reportEvery === 0 || s === steps - 1) {
+        post({
+          type: 'progress',
+          pct: 8 + 91 * (s + 1) / steps,
+          label: 'Integrating \u00b7 step ' + (s + 1) + ' / ' + steps
+        });
+      }
+    }
+
+    post({
+      type: 'result', ok: true,
+      Z: y, M: mA, N: nA,
+      ms: performance.now() - t0,
+      blown: blown,
+      parula: PARULA
+    }, [y.buffer]);
+
+  } catch (err) {
+    post({ type: 'result', ok: false,
+           error: err.message + '\n' + err.stack });
+  }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var NIEK_PATH = 'Niek.jpg';            // relative to this page
+  var CAN_FETCH_BY_PATH = location.protocol !== 'file:';
+
+  var worker = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var CMAP = null;
+
+  function setStatus(m) { $('status').innerHTML = m; }
+
+  function setProgress(pct, label) {
+    var wrap = $('progressWrap');
+    if (pct == null) {
+      wrap.classList.remove('active');
+      $('progressText').textContent = '';
+      return;
+    }
+    wrap.classList.add('active');
+    $('progressFill').style.width = Math.max(0, Math.min(100, pct)) + '%';
+    $('progressText').textContent = label || '';
+  }
+
+  // ---------- colormap ----------
+  function buildCmap(stops) { CMAP = stops.map(function (s) { return s.slice(); }); }
+
+  function colorAt(v) {
+    v = v < 0 ? 0 : v > 1 ? 1 : v;
+    var i = 0;
+    while (i < CMAP.length - 2 && v > CMAP[i + 1][0]) i++;
+    var a = CMAP[i], b = CMAP[i + 1];
+    var t = (v - a[0]) / ((b[0] - a[0]) || 1);
+    return [
+      Math.round(a[1] + t * (b[1] - a[1])),
+      Math.round(a[2] + t * (b[2] - a[2])),
+      Math.round(a[3] + t * (b[3] - a[3]))
+    ];
+  }
+
+  function drawColorbar() {
+    var stops = [];
+    for (var i = 0; i <= 20; i++) {
+      var c = colorAt(i / 20);
+      stops.push('rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ') ' + (i * 5) + '%');
+    }
+    $('colorbar').style.background = 'linear-gradient(to right,' + stops.join(',') + ')';
+  }
+
+  // ---------- canvas helpers ----------
+  // Returns true if the canvas pixels are readable (not cross-origin tainted).
+  function pixelsReadable() {
+    var cv = $('inputCanvas');
+    try {
+      cv.getContext('2d').getImageData(0, 0, 1, 1);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function drawIntoCanvas(im, note) {
+    var cv = $('inputCanvas');
+    var MAX = 1400;
+    var w = im.naturalWidth || im.width;
+    var h = im.naturalHeight || im.height;
+    if (Math.max(w, h) > MAX) {
+      var k = MAX / Math.max(w, h);
+      w = Math.round(w * k);
+      h = Math.round(h * k);
+    }
+    cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(im, 0, 0, w, h);
+
+    if (!pixelsReadable()) {
+      setStatus('<span style="color:#b3261e">Image loaded but its pixels ' +
+        'cannot be read (cross-origin).</span> Drag the file in, use the ' +
+        'file picker, or serve the page over http:// &mdash; see below.');
+      return false;
+    }
+    setStatus((note ? note + ' &mdash; ' : '') + 'loaded ' + w + '&times;' + h +
+              '. Ready to run.');
+    return true;
+  }
+
+  function loadFromFile(file) {
+    var fr = new FileReader();
+    fr.onload = function (evt) {
+      var im = new Image();
+      im.onload  = function () { drawIntoCanvas(im, file.name); };
+      im.onerror = function () { setStatus('Could not decode ' + file.name + '.'); };
+      im.src = evt.target.result;      // data: URL -> never taints
+    };
+    fr.readAsDataURL(file);
+  }
+
+  function loadFromPath(path, note) {
+    return new Promise(function (resolve, reject) {
+      var im = new Image();
+      im.onload  = function () { resolve(drawIntoCanvas(im, note)); };
+      im.onerror = function () { reject(new Error('could not load ' + path)); };
+      im.src = path;
+    });
+  }
+
+  function pickFile() {
+    var inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/*';
+    inp.onchange = function () {
+      if (inp.files && inp.files[0]) loadFromFile(inp.files[0]);
+    };
+    inp.click();
+  }
+
+  // ---------- worker ----------
+  function ensureWorker() {
+    if (worker) return worker;
+    var url = URL.createObjectURL(new Blob(
+      [$('workerSrc').textContent], { type: 'text/javascript' }));
+    worker = new Worker(url);
+    worker.onmessage = onWorkerMessage;
+    worker.onerror = function (e) {
+      setStatus('Worker error: ' + (e.message || 'unknown'));
+      setProgress(null);
+      busy(false);
+    };
+    return worker;
+  }
+
+  function busy(state) {
+    $('runBtn').disabled = state;
+    $('niekBtn').disabled = state;
+    $('imageInput').disabled = state;
+  }
+
+  function runSimulation() {
+    var inC = $('inputCanvas');
+    if (!inC.width || !inC.height) { setStatus('No image loaded yet.'); return; }
+
+    var skip      = parseInt($('skipInput').value, 10);
+    var tau       = parseFloat($('tauInput').value);
+    var finalTime = parseFloat($('finalTimeInput').value);
+    var maxSteps  = parseInt($('maxStepsInput').value, 10);
+
+    if (!(skip >= 1) || !isFinite(tau) || !(finalTime > 0) || !(maxSteps >= 1)) {
+      setStatus('Please enter valid parameters.');
+      return;
+    }
+
+    var pixels;
+    try {
+      pixels = inC.getContext('2d')
+                 .getImageData(0, 0, inC.width, inC.height).data;
+    } catch (err) {
+      setStatus('Cannot read image pixels &mdash; the canvas is tainted. ' +
+                'Drag the image in or use the file picker.');
+      return;
+    }
+
+    var mA = Math.floor((inC.height - 1) / skip) + 1;
+    var nA = Math.floor((inC.width  - 1) / skip) + 1;
+
+    busy(true);
+    setProgress(0, 'Starting\u2026');
+    setStatus('Running &mdash; grid ' + mA + '&times;' + nA +
+              ' (' + (mA * nA) + ' nodes), dt = ' +
+              (finalTime / maxSteps).toFixed(4));
+
+    ensureWorker().postMessage({
+      skip: skip, tau: tau, finalTime: finalTime, maxSteps: maxSteps,
+      width: inC.width, height: inC.height, pixels: pixels
+    }, [pixels.buffer]);
+  }
+
+  function onWorkerMessage(e) {
+    var d = e.data;
+
+    if (d.type === 'progress') { setProgress(d.pct, d.label); return; }
+    if (d.type !== 'result') return;
+
+    busy(false);
+
+    if (!d.ok) { setProgress(null); setStatus('Error: ' + d.error); return; }
+
+    if (d.parula) { buildCmap(d.parula); drawColorbar(); }
+    setProgress(100, 'Rendering\u2026');
+
+    var Z = d.Z, M = d.M, N = d.N;
+    var cv = $('outputCanvas');
+    var ctx = cv.getContext('2d');
+
+    var scale = Math.max(1, Math.min(8, Math.floor(760 / N)));
+    cv.width = N * scale;
+    cv.height = M * scale;
+
+    var lo = Infinity, hi = -Infinity;
+    for (var i = 0; i < Z.length; i++) {
+      if (Z[i] < lo) lo = Z[i];
+      if (Z[i] > hi) hi = Z[i];
+    }
+    var range = (hi - lo) || 1;
+
+    var buf = ctx.createImageData(N, M);
+    for (var p = 0; p < Z.length; p++) {
+      var c = colorAt((Z[p] - lo) / range);
+      var o = p * 4;
+      buf.data[o] = c[0];
+      buf.data[o + 1] = c[1];
+      buf.data[o + 2] = c[2];
+      buf.data[o + 3] = 255;
+    }
+
+    var off = document.createElement('canvas');
+    off.width = N; off.height = M;
+    off.getContext('2d').putImageData(buf, 0, 0);
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(off, 0, 0, N, M, 0, 0, cv.width, cv.height);
+
+    $('cbLo').textContent = lo.toFixed(3);
+    $('cbHi').textContent = hi.toFixed(3);
+
+    setStatus((d.blown ? '\u26a0 Diverged &mdash; increase integration steps. '
+                       : 'Done. ') +
+              M + '&times;' + N + ' nodes \u00b7 ' + Math.round(d.ms) + ' ms');
+
+    setTimeout(function () { setProgress(null); }, 300);
+  }
+
+  // ---------- wiring ----------
+  $('imageInput').addEventListener('change', function (e) {
+    if (e.target.files && e.target.files[0]) loadFromFile(e.target.files[0]);
+  });
+
+  $('niekBtn').addEventListener('click', function () {
+    if (CAN_FETCH_BY_PATH) {
+      setStatus('Fetching ' + NIEK_PATH + '\u2026');
+      loadFromPath(NIEK_PATH, NIEK_PATH).catch(function () {
+        setStatus('Could not load "' + NIEK_PATH + '". Is it next to this ' +
+                  'page? Falling back to the file picker.');
+        pickFile();
+      });
+    } else {
+      // file:// -- a path load would taint the canvas, so ask for the file.
+      setStatus('Opened from disk, so please select <strong>' + NIEK_PATH +
+                '</strong> manually (browsers block reading local files ' +
+                'by path). Tip: just drag the file onto the page instead.');
+      pickFile();
+    }
+  });
+
+  $('runBtn').addEventListener('click', runSimulation);
+
+  // drag & drop -- works on file:// too, because it yields a real File object
+  var dz = $('dropzone');
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dz.classList.add('hover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      e.preventDefault();
+      if (ev === 'drop' || e.target === document.documentElement) {
+        dz.classList.remove('hover');
+      }
+    });
+  });
+  document.addEventListener('drop', function (e) {
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f && /^image\//.test(f.type)) loadFromFile(f);
+  });
+
+  // ---------- startup ----------
+  buildCmap([
+    [0.00, 53,42,135],[0.09,27,70,160],[0.19,15,101,175],[0.30,9,130,166],
+    [0.41,18,155,139],[0.52,55,173,106],[0.63,108,186,66],[0.74,166,196,32],
+    [0.84,214,211,19],[0.93,240,232,13],[1.00,248,253,7]
+  ]);
+  drawColorbar();
+
+  function seedTestImage() {
+    var cv = $('inputCanvas'), ctx = cv.getContext('2d');
+    var w = cv.width, h = cv.height;
+    var img = ctx.createImageData(w, h);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var o = (y * w + x) * 4;
+        var cx = w / 2, cy = h * 0.54;
+        var headR = Math.min(w, h) * 0.17;
+        var inHead = (x - cx) * (x - cx) + (y - cy) * (y - cy) < headR * headR;
+        var inBody = y > cy + headR * 0.6 && Math.abs(x - cx) < (y - cy) * 0.68;
+        var v = (inHead || inBody) ? 225 : 30;
+        img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
+        img.data[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  if (CAN_FETCH_BY_PATH) {
+    loadFromPath(NIEK_PATH, NIEK_PATH).catch(function () {
+      seedTestImage();
+      setStatus('"' + NIEK_PATH + '" not found &mdash; using a generated test ' +
+                'image. Drop the file onto the page, or upload your own.');
+    });
+  } else {
+    seedTestImage();
+    setStatus('Opened from <code>file://</code>, so "' + NIEK_PATH +
+              '" can\'t be read by path. <strong>Drag it onto the page</strong> ' +
+              'or click "Use Niek\'s photo" to pick it. ' +
+              '<span class="hint">(Or run <code>python3 -m http.server</code> ' +
+              'in this folder and open <code>http://localhost:8000</code>.)</span>');
+  }
+})();
+</script>
 </body>
+</html>
