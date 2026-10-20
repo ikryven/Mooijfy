@@ -408,6 +408,22 @@ self.onmessage = function (ev) {
   if (CAN_FETCH) { loadFromPath(CFG.niekPath, CFG.niekPath).catch(function () { seedTestImage(); setStatus('"' + CFG.niekPath + '" not found.'); }); } else { seedTestImage(); setStatus('file:// mode. Drag image or use picker.'); }
   loadGallery();
 })();
+
+  // Trigger mooijfy on Enter key in any parameter field
+  var paramInputs = [
+    $('skipInput'), $('tauInput'), $('expInput'),
+    $('finalTimeInput'), $('maxStepsInput')
+  ];
+
+  paramInputs.forEach(function (inp) {
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.keyCode === 13) {
+        e.preventDefault();   // stop form submit behavior
+        runSimulation();
+      }
+    });
+  });
+  
 </script>
 </body>
 </html>
