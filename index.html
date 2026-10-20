@@ -400,15 +400,6 @@ self.onmessage = function (ev) {
   document.addEventListener('drop', function (e) { e.preventDefault(); var f = e.dataTransfer && e.dataTransfer.files[0]; if (f && /^image\//.test(f.type)) loadFromFile(f); });
   document.addEventListener('dragover', function (e) { e.preventDefault(); });
 
-  buildCmap([[0.00,53,42,135],[0.09,27,70,160],[0.19,15,101,175],[0.30,9,130,166],[0.41,18,155,139],[0.52,55,173,106],[0.63,108,186,66],[0.74,166,196,32],[0.84,214,211,19],[0.93,240,232,13],[1.00,248,253,7]]);
-  drawColorbar();
-
-  function seedTestImage() { var cv = $('inputCanvas'), ctx = cv.getContext('2d'), w = cv.width, h = cv.height, img = ctx.createImageData(w, h); for (var y = 0; y < h; y++) { for (var x = 0; x < w; x++) { var o = (y * w + x) * 4, cx = w / 2, cy = h * 0.54, headR = Math.min(w, h) * 0.17, inHead = (x - cx) * (x - cx) + (y - cy) * (y - cy) < headR * headR, inBody = y > cy + headR * 0.6 && Math.abs(x - cx) < (y - cy) * 0.68, v = (inHead || inBody) ? 225 : 30; img.data[o] = img.data[o + 1] = img.data[o + 2] = v; img.data[o + 3] = 255; } } ctx.putImageData(img, 0, 0); }
-
-  if (CAN_FETCH) { loadFromPath(CFG.niekPath, CFG.niekPath).catch(function () { seedTestImage(); setStatus('"' + CFG.niekPath + '" not found.'); }); } else { seedTestImage(); setStatus('file:// mode. Drag image or use picker.'); }
-  loadGallery();
-})();
-
   // Trigger mooijfy on Enter key in any parameter field
   var paramInputs = [
     $('skipInput'), $('tauInput'), $('expInput'),
@@ -423,6 +414,18 @@ self.onmessage = function (ev) {
       }
     });
   });
+  
+  
+  buildCmap([[0.00,53,42,135],[0.09,27,70,160],[0.19,15,101,175],[0.30,9,130,166],[0.41,18,155,139],[0.52,55,173,106],[0.63,108,186,66],[0.74,166,196,32],[0.84,214,211,19],[0.93,240,232,13],[1.00,248,253,7]]);
+  drawColorbar();
+
+  function seedTestImage() { var cv = $('inputCanvas'), ctx = cv.getContext('2d'), w = cv.width, h = cv.height, img = ctx.createImageData(w, h); for (var y = 0; y < h; y++) { for (var x = 0; x < w; x++) { var o = (y * w + x) * 4, cx = w / 2, cy = h * 0.54, headR = Math.min(w, h) * 0.17, inHead = (x - cx) * (x - cx) + (y - cy) * (y - cy) < headR * headR, inBody = y > cy + headR * 0.6 && Math.abs(x - cx) < (y - cy) * 0.68, v = (inHead || inBody) ? 225 : 30; img.data[o] = img.data[o + 1] = img.data[o + 2] = v; img.data[o + 3] = 255; } } ctx.putImageData(img, 0, 0); }
+
+  if (CAN_FETCH) { loadFromPath(CFG.niekPath, CFG.niekPath).catch(function () { seedTestImage(); setStatus('"' + CFG.niekPath + '" not found.'); }); } else { seedTestImage(); setStatus('file:// mode. Drag image or use picker.'); }
+  loadGallery();
+})();
+
+ 
   
 </script>
 </body>
