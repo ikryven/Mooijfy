@@ -58,7 +58,6 @@
   .lightbox img { max-width:92vw; max-height:70vh; background:#fff; border-radius:4px; }
   .lightbox .lbcap { color:#fff; font-size:14px; text-align:center; max-width:75vw; }
   
-  /* Mobile optimizations */
   @media (max-width: 768px) {
     body { padding:12px; }
     .container { padding:0 8px; }
@@ -88,7 +87,6 @@
 </head>
 <body>
 
-<!-- LUMO CAT SVG SYMBOL -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="lumoCat" viewBox="0 0 100 100">
     <polygon points="20,34 14,6 40,30" fill="#6d4aff"/>
@@ -172,7 +170,6 @@
   <div class="lbcap" id="lbCap"></div>
 </div>
 
-<!-- WORKER SCRIPT -->
 <script id="workerSrc" type="text/plain">
 var PARULA = [
   [0.00,  53,  42, 135],[0.07,  31,  63, 156],[0.15,  18,  89, 171],
@@ -246,9 +243,7 @@ self.onmessage = function (ev) {
 (function () {
   'use strict';
 
-  // Hardcoded recipient email - no variable lookup
   var RECIPIENT_EMAIL = 'mooijfy@protonmail.ch';
-
   var CFG = { niekPath: 'Niek.jpg', imgDir: 'imgs', manifest: 'imgs/gallery.json', captions: 'imgs/captions.json' };
   var CAN_FETCH = location.protocol !== 'file:';
   var worker = null, CMAP = null, lastResult = null;
@@ -361,29 +356,16 @@ self.onmessage = function (ev) {
   function downloadBlob(blob, filename) { var url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 4000); }
   function saveFigure() { if (!lastResult) { setStatus('Run mooijfy first!'); return; } canvasToBlob($('outputCanvas')).then(function (blob) { downloadBlob(blob, 'mooijfy_result.png'); setStatus('Saved as mooijfy_result.png'); }); }
 
-  function paramSummary() { return 'downsampling=' + $('skipInput').value + ', tau=' + $('tauInput').value + ', exponent=' + $('expInput').value + ', invert=' + ($('invertCheck').checked ? 'on' : 'off') + ', final time=' + $('finalTimeInput').value + ', steps=' + $('maxStepsInput').value; }
-
-
-  // Set to true only if you want the OS share sheet (which cannot carry a recipient).
   var USE_SHARE_SHEET = true;
 
   function submitToGallery() {
     if (!lastResult) { setStatus('Run mooijfy first.'); return; }
-
-    
     var stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    var slug = name ? name.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' : '';
     var fname = 'mooijfy_result.png';
-    
-    var stamp   = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-  
     var subject = 'mooijfy gallery submission';
     var body = 'Look at this mooijfied image!\n To submit to the gallery, email to mooijfy@protonmail.ch with a name/comment. Make sure the image size is chosen to be Large or Actual size.';
-      
 
     canvasToBlob($('outputCanvas')).then(function (blob) {
-
-      // Optional: OS share sheet. Off by default because it cannot set a recipient.
       if (USE_SHARE_SHEET) {
         var file = null;
         try { file = new File([blob], fname, { type: 'image/png' }); } catch (e) {}
@@ -397,7 +379,6 @@ self.onmessage = function (ev) {
           return;
         }
       }
-
       sendByEmail(blob, fname, subject, body);
     });
   }
@@ -411,15 +392,13 @@ self.onmessage = function (ev) {
               'email that just opened.');
   }
 
-  // --- Gallery functions ---
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
   function imageUrl(item) { if (item.url) return item.url; var f = item.file; if (/^(https?:|data:|blob:|\/)/i.test(f)) return f; return CFG.imgDir.replace(/\/+$/, '') + '/' + f.replace(/^\/+/, ''); }
   function normalizeManifest(data) { var arr = Array.isArray(data) ? data : (data && (data.images || data.items)) || []; return arr.map(function (it) { if (typeof it === 'string') return { file: it, name: '', comment: '' }; return { file: it.file || '', url: it.url || '', name: it.name || '', comment: it.comment || '' }; }).filter(function (it) { return it.file || it.url; }); }
   function renderGallery(items) { var host = $('gallery'); host.innerHTML = ''; items.forEach(function (it) { var fig = document.createElement('figure'); fig.className = 'gitem'; var img = document.createElement('img'); img.loading = 'lazy'; img.src = imageUrl(it); img.addEventListener('click', function () { openLightbox(it, img.src); }); fig.appendChild(img); if (it.name || it.comment) { var cap = document.createElement('figcaption'); if (it.name) { var b = document.createElement('strong'); b.textContent = it.name; cap.appendChild(b); } if (it.comment) { var s = document.createElement('span'); s.textContent = it.comment; cap.appendChild(s); } fig.appendChild(cap); } host.appendChild(fig); }); }
-  function openLightbox(item, src) { $('lbImg').src = src; $('lbCap').textContent = (item.name ? item.name : '') + (item.comment ? ' - ' + it.comment : ''); $('lightbox').classList.add('open'); }
+  function openLightbox(item, src) { $('lbImg').src = src; $('lbCap').textContent = (item.name ? item.name : '') + (item.comment ? ' - ' + item.comment : ''); $('lightbox').classList.add('open'); }
   function loadGallery() { var st = $('galleryStatus'); fetch(CFG.manifest, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('not found'); return r.json(); }).then(function (data) { var items = normalizeManifest(data); return fetch(CFG.captions, { cache: 'no-store' }).then(function (cr) { return cr.ok ? cr.json() : {}; }).catch(function () { return {}; }).then(function (caps) { if (Object.keys(caps).length) { items.forEach(function (it) { var c = caps[it.file || ''] || {}; it.name = it.name || c.name || ''; it.comment = it.comment || c.caption || c.comment || ''; }); } return items; }); }).then(function (items) { if (!items || !items.length) { st.innerHTML = 'No images in <code>' + esc(CFG.manifest) + '</code>'; return; } renderGallery(items); st.textContent = items.length + ' image(s) in gallery.'; }).catch(function () { st.innerHTML = 'Could not load ' + esc(CFG.manifest); }); }
 
-  // Wiring
   $('imageInput').addEventListener('change', function (e) { if (e.target.files && e.target.files[0]) loadFromFile(e.target.files[0]); });
   $('niekBtn').addEventListener('click', function () { if (CAN_FETCH) { loadFromPath(CFG.niekPath, CFG.niekPath).catch(function () { pickFile(); }); } else { pickFile(); } });
   $('runBtn').addEventListener('click', runSimulation);
@@ -430,7 +409,6 @@ self.onmessage = function (ev) {
   document.addEventListener('drop', function (e) { e.preventDefault(); var f = e.dataTransfer && e.dataTransfer.files[0]; if (f && /^image\//.test(f.type)) loadFromFile(f); });
   document.addEventListener('dragover', function (e) { e.preventDefault(); });
 
-  // Trigger mooijfy on Enter key in any parameter field
   var paramInputs = [
     $('skipInput'), $('tauInput'), $('expInput'),
     $('finalTimeInput'), $('maxStepsInput')
@@ -439,12 +417,11 @@ self.onmessage = function (ev) {
   paramInputs.forEach(function (inp) {
     inp.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.keyCode === 13) {
-        e.preventDefault();   // stop form submit behavior
+        e.preventDefault();
         runSimulation();
       }
     });
   });
-  
   
   buildCmap([[0.00,53,42,135],[0.09,27,70,160],[0.19,15,101,175],[0.30,9,130,166],[0.41,18,155,139],[0.52,55,173,106],[0.63,108,186,66],[0.74,166,196,32],[0.84,214,211,19],[0.93,240,232,13],[1.00,248,253,7]]);
   drawColorbar();
@@ -454,9 +431,6 @@ self.onmessage = function (ev) {
   if (CAN_FETCH) { loadFromPath(CFG.niekPath, CFG.niekPath).catch(function () { seedTestImage(); setStatus('"' + CFG.niekPath + '" not found.'); }); } else { seedTestImage(); setStatus('file:// mode. Drag image or use picker.'); }
   loadGallery();
 })();
-
- 
-  
 </script>
 </body>
 </html>
