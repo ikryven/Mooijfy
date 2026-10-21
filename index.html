@@ -2,45 +2,48 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>Upload your photo and run mooijfy.</title>
 <style>
   :root { --purple:#6d4aff; --purple-dark:#5a3ad6; }
-  body { font-family: system-ui, Arial, sans-serif; padding:20px; background:#f5f5f5; color:#222; }
-  .container { max-width:1100px; margin:0 auto; }
-  .header { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+  body { font-family: system-ui, Arial, sans-serif; padding:20px; background:#f5f5f5; color:#222; margin:0; box-sizing:border-box; }
+  *, *:before, *:after { box-sizing: inherit; }
+  .container { max-width:1100px; margin:0 auto; padding:0 10px; }
+  .header { display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap; }
   .logo { width:46px; height:46px; flex:none; }
-  h1 { margin:0; color:var(--purple); font-size:23px; }
+  h1 { margin:0; color:var(--purple); font-size:23px; line-height:1.2; flex:1; min-width:200px; }
   h2 { font-size:16px; margin:0 0 10px; color:#333; }
   .panel { background:#fff; padding:16px; border-radius:8px; margin-bottom:16px; }
   .row { margin:9px 0; }
   .row-inline { display:flex; align-items:center; gap:12px; margin:9px 0; flex-wrap:wrap; }
-  label { display:inline-block; width:170px; font-weight:500; }
-  input[type=number] { width:90px; padding:4px; }
-  input[type=text] { width:280px; padding:5px; }
-  input[type=checkbox] { width:18px; height:18px; }
-  button { padding:9px 18px; background:var(--purple); color:#fff; border:none;
-           border-radius:5px; cursor:pointer; font-size:14px; margin-right:8px; }
+  label { display:inline-block; width:170px; font-weight:500; min-width:120px; flex-shrink:0; }
+  input[type=number] { width:90px; padding:6px 8px; font-size:16px; min-width:70px; }
+  input[type=text] { width:280px; padding:6px 8px; font-size:16px; }
+  input[type=file] { font-size:14px; flex:1; min-width:150px; }
+  input[type=checkbox] { width:20px; height:20px; accent-color:var(--purple); }
+  button { padding:12px 20px; background:var(--purple); color:#fff; border:none;
+           border-radius:5px; cursor:pointer; font-size:15px; margin-right:8px; touch-action:manipulation; min-width:80px; }
   button:hover:not(:disabled) { background:var(--purple-dark); }
   button:disabled { background:#bbb; cursor:default; }
   button.secondary { background:#8892a6; }
-  .status { margin:12px 0; color:#444; font-weight:600; min-height:1.2em; }
-  .help-text { font-size:11px; color:#888; }
-  .dropzone { border:2px dashed #c9c2ee; border-radius:8px; padding:10px;
-              text-align:center; color:#888; font-size:13px; margin:10px 0; }
+  .status { margin:12px 0; color:#444; font-weight:600; min-height:1.2em; font-size:14px; }
+  .help-text { font-size:12px; color:#888; }
+  .dropzone { border:2px dashed #c9c2ee; border-radius:8px; padding:20px 10px;
+              text-align:center; color:#888; font-size:14px; margin:10px 0; min-height:60px; }
   .progress-wrap { height:14px; background:#e6e6ee; border-radius:7px;
                    overflow:hidden; margin:12px 0 5px; display:none; }
   .progress-wrap.active { display:block; }
   .progress-fill { height:100%; width:0%; background:linear-gradient(90deg,var(--purple),#a58bff); }
-  .progress-text { font-size:12px; color:#555; min-height:1.1em; }
+  .progress-text { font-size:13px; color:#555; min-height:1.1em; margin-bottom:8px; }
   #inputCanvas { display:none; }
   #outputCanvas { border:1px solid #ccc; background:#fff; display:block;
-                  image-rendering:pixelated; max-width:100%; }
-  .cbwrap { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; }
-  .colorbar { height:18px; flex:1; border-radius:3px; border:1px solid #ddd; }
+                  image-rendering:pixelated; max-width:100%; height:auto; }
+  .cbwrap { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; flex-wrap:wrap; }
+  .colorbar { height:20px; flex:1; border-radius:3px; border:1px solid #ddd; min-width:150px; }
   .footer { margin-top:24px; padding:16px; background:#fff; border-radius:8px;
             display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
   .footer .cat { width:34px; height:34px; flex:none; }
-  .ref { font-size:12.5px; color:#555; margin-left:auto; text-align:right; }
+  .ref { font-size:13px; color:#555; margin-left:auto; text-align:right; }
   .ref a { color:var(--purple); text-decoration:none; }
   .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
   .gitem { margin:0; background:#faf9ff; border:1px solid #e6e2f7; border-radius:8px; overflow:hidden; }
@@ -52,8 +55,35 @@
               align-items:center; justify-content:center; padding:24px; z-index:50;
               cursor:zoom-out; flex-direction:column; gap:14px; }
   .lightbox.open { display:flex; }
-  .lightbox img { max-width:88vw; max-height:74vh; background:#fff; border-radius:4px; }
-  .lightbox .lbcap { color:#fff; font-size:13px; text-align:center; max-width:70vw; }
+  .lightbox img { max-width:92vw; max-height:70vh; background:#fff; border-radius:4px; }
+  .lightbox .lbcap { color:#fff; font-size:14px; text-align:center; max-width:75vw; }
+  
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    body { padding:12px; }
+    .container { padding:0 8px; }
+    .header { gap:10px; }
+    h1 { font-size:20px; }
+    .panel { padding:14px; }
+    label { width:100%; margin-bottom:6px; min-width:auto; }
+    .row-inline { flex-direction:column; align-items:flex-start; }
+    input[type=number], input[type=text] { width:100%; }
+    input[type=file] { width:100%; }
+    button { width:100%; margin:6px 0; }
+    .gallery { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); }
+    .ref { margin-left:0; text-align:left; width:100%; margin-top:10px; }
+  }
+  
+  @media (max-width: 480px) {
+    body { padding:10px; }
+    .logo { width:40px; height:40px; }
+    h1 { font-size:18px; }
+    .panel { padding:12px; }
+    .dropzone { padding:15px 8px; font-size:13px; }
+    button { padding:10px 16px; font-size:14px; }
+    #outputCanvas { max-width:100%; }
+    .cbwrap span { font-size:12px; }
+  }
 </style>
 </head>
 <body>
@@ -382,11 +412,11 @@ self.onmessage = function (ev) {
   }
 
   // --- Gallery functions ---
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }; }
   function imageUrl(item) { if (item.url) return item.url; var f = item.file; if (/^(https?:|data:|blob:|\/)/i.test(f)) return f; return CFG.imgDir.replace(/\/+$/, '') + '/' + f.replace(/^\/+/, ''); }
   function normalizeManifest(data) { var arr = Array.isArray(data) ? data : (data && (data.images || data.items)) || []; return arr.map(function (it) { if (typeof it === 'string') return { file: it, name: '', comment: '' }; return { file: it.file || '', url: it.url || '', name: it.name || '', comment: it.comment || '' }; }).filter(function (it) { return it.file || it.url; }); }
   function renderGallery(items) { var host = $('gallery'); host.innerHTML = ''; items.forEach(function (it) { var fig = document.createElement('figure'); fig.className = 'gitem'; var img = document.createElement('img'); img.loading = 'lazy'; img.src = imageUrl(it); img.addEventListener('click', function () { openLightbox(it, img.src); }); fig.appendChild(img); if (it.name || it.comment) { var cap = document.createElement('figcaption'); if (it.name) { var b = document.createElement('strong'); b.textContent = it.name; cap.appendChild(b); } if (it.comment) { var s = document.createElement('span'); s.textContent = it.comment; cap.appendChild(s); } fig.appendChild(cap); } host.appendChild(fig); }); }
-  function openLightbox(item, src) { $('lbImg').src = src; $('lbCap').textContent = (item.name ? item.name : '') + (item.comment ? ' - ' + item.comment : ''); $('lightbox').classList.add('open'); }
+  function openLightbox(item, src) { $('lbImg').src = src; $('lbCap').textContent = (item.name ? item.name : '') + (item.comment ? ' - ' + it.comment : ''); $('lightbox').classList.add('open'); }
   function loadGallery() { var st = $('galleryStatus'); fetch(CFG.manifest, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('not found'); return r.json(); }).then(function (data) { var items = normalizeManifest(data); return fetch(CFG.captions, { cache: 'no-store' }).then(function (cr) { return cr.ok ? cr.json() : {}; }).catch(function () { return {}; }).then(function (caps) { if (Object.keys(caps).length) { items.forEach(function (it) { var c = caps[it.file || ''] || {}; it.name = it.name || c.name || ''; it.comment = it.comment || c.caption || c.comment || ''; }); } return items; }); }).then(function (items) { if (!items || !items.length) { st.innerHTML = 'No images in <code>' + esc(CFG.manifest) + '</code>'; return; } renderGallery(items); st.textContent = items.length + ' image(s) in gallery.'; }).catch(function () { st.innerHTML = 'Could not load ' + esc(CFG.manifest); }); }
 
   // Wiring
