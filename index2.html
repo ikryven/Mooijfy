@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Upload your photo and run mooijfy.</title>
+<style>
+  :root { --purple:#6d4aff; --purple-dark:#5a3ad6; }
+  body { font-family: system-ui, Arial, sans-serif; padding:20px; background:#f5f5f5; color:#222; margin:0; box-sizing:border-box; }
+  *, *:before, *:after { box-sizing: inherit; }
+  .container { max-width:1100px; margin:0 auto; padding:0 10px; }
+  .header { display:flex; align-items:center; gap:14px; margin-bottom:16px; flex-wrap:wrap; }
+  .logo { width:46px; height:46px; flex:none; }
+  h1 { margin:0; color:var(--purple); font-size:23px; line-height:1.2; flex:1; min-width:200px; }
+  h2 { font-size:16px; margin:0 0 10px; color:#333; }
+  .panel { background:#fff; padding:16px; border-radius:8px; margin-bottom:16px; }
+  .row { margin:9px 0; }
+  .row-inline { display:flex; align-items:center; gap:12px; margin:9px 0; flex-wrap:wrap; }
+  label { display:inline-block; width:170px; font-weight:500; min-width:120px; flex-shrink:0; }
+  input[type=number] { width:90px; padding:6px 8px; font-size:16px; min-width:70px; }
+  input[type=text] { width:280px; padding:6px 8px; font-size:16px; }
+  input[type=file] { font-size:14px; flex:1; min-width:150px; }
+  input[type=checkbox] { width:20px; height:20px; accent-color:var(--purple); }
+  button { padding:12px 20px; background:var(--purple); color:#fff; border:none;
+           border-radius:5px; cursor:pointer; font-size:15px; margin-right:8px; touch-action:manipulation; min-width:80px; }
+  button:hover:not(:disabled) { background:var(--purple-dark); }
+  button:disabled { background:#bbb; cursor:default; }
+  button.secondary { background:#8892a6; }
+  .status { margin:12px 0; color:#444; font-weight:600; min-height:1.2em; font-size:14px; }
+  .help-text { font-size:12px; color:#888; }
+  .dropzone { border:2px dashed #c9c2ee; border-radius:8px; padding:20px 10px;
+              text-align:center; color:#888; font-size:14px; margin:10px 0; min-height:60px; }
+  .progress-wrap { height:14px; background:#e6e6ee; border-radius:7px;
+                   overflow:hidden; margin:12px 0 5px; display:none; }
+  .progress-wrap.active { display:block; }
+  .progress-fill { height:100%; width:0%; background:linear-gradient(90deg,var(--purple),#a58bff); }
+  .progress-text { font-size:13px; color:#555; min-height:1.1em; margin-bottom:8px; }
+  #inputCanvas { display:none; }
+  #outputCanvas { border:1px solid #ccc; background:#fff; display:block;
+                  image-rendering:pixelated; max-width:100%; height:auto; }
+  .cbwrap { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px; flex-wrap:wrap; }
+  .colorbar { height:20px; flex:1; border-radius:3px; border:1px solid #ddd; min-width:150px; }
+  .footer { margin-top:24px; padding:16px; background:#fff; border-radius:8px;
+            display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .footer .cat { width:34px; height:34px; flex:none; }
+  .ref { font-size:13px; color:#555; margin-left:auto; text-align:right; }
+  .ref a { color:var(--purple); text-decoration:none; }
+  .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .gitem { margin:0; background:#faf9ff; border:1px solid #e6e2f7; border-radius:8px; overflow:hidden; }
+  .gitem img { width:100%; display:block; aspect-ratio:1/1; object-fit:cover;
+               cursor:zoom-in; image-rendering:pixelated; background:#fff; }
+  .gitem figcaption { padding:7px 9px; font-size:11px; color:#555; display:flex; flex-direction:column; gap:2px; }
+  .gitem figcaption strong { color:#333; font-size:12px; }
+  .lightbox { position:fixed; inset:0; background:rgba(22,14,52,.88); display:none;
+              align-items:center; justify-content:center; padding:24px; z-index:50;
+              cursor:zoom-out; flex-direction:column; gap:14px; }
+  .lightbox.open { display:flex; }
+  .lightbox img { max-width:92vw; max-height:70vh; background:#fff; border-radius:4px; }
+  .lightbox .lbcap { color:#fff; font-size:14px; text-align:center; max-width:75vw; }
+  
+  @media (max-width: 768px) {
+    body { padding:12px; }
+    .container { padding:0 8px; }
+    .header { gap:10px; }
+    h1 { font-size:20px; }
+    .panel { padding:14px; }
+    label { width:100%; margin-bottom:6px; min-width:auto; }
+    .row-inline { flex-direction:column; align-items:flex-start; }
+    input[type=number], input[type=text] { width:100%; }
+    input[type=file] { width:100%; }
+    button { width:100%; margin:6px 0; }
+    .gallery { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); }
+    .ref { margin-left:0; text-align:left; width:100%; margin-top:10px; }
+  }
+  
+  @media (max-width: 480px) {
+    body { padding:10px; }
+    .logo { width:40px; height:40px; }
+    h1 { font-size:18px; }
+    .panel { padding:12px; }
+    .dropzone { padding:15px 8px; font-size:13px; }
+    button { padding:10px 16px; font-size:14px; }
+    #outputCanvas { max-width:100%; }
+    .cbwrap span { font-size:12px; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="lumoCat" viewBox="0 0 100 100">
+    <polygon points="20,34 14,6 40,30" fill="#6d4aff"/>
+    <polygon points="80,34 86,6 60,30" fill="#6d4aff"/>
+    <rect x="14" y="30" width="72" height="64" rx="18" fill="#6d4aff"/>
+    <ellipse cx="36" cy="52" rx="12" ry="9" fill="#ffffff"/>
+    <ellipse cx="64" cy="52" rx="12" ry="9" fill="#ffffff"/>
+    <ellipse cx="36" cy="52" rx="3" ry="6" fill="#1c1440"/>
+    <ellipse cx="64" cy="52" rx="3" ry="6" fill="#1c1440"/>
+    <path d="M45 66 L50 70.5 L55 66" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M24 74 Q50 85 76 74" fill="none" stroke="#4a35b8" stroke-width="2.5"/>
+    <circle cx="50" cy="81" r="6" fill="#f2c14e"/>
+    <circle cx="50" cy="81" r="2.2" fill="#d9a52f"/>
+  </symbol>
+</svg>
+
+<div class="container">
+  <div class="header">
+    <svg class="logo"><use href="#lumoCat"/></svg>
+    <h1>Upload your photo and run mooijfy.</h1>
+  </div>
+
+  <div class="panel">
+    <div class="row-inline">
+      <label>Image:</label>
+      <input type="file" id="imageInput" accept="image/*">
+      <button id="niekBtn" type="button">or use Niek's photo</button>
+    </div>
+    <div class="row-inline"><label>Downsampling:</label>
+      <input type="number" id="skipInput" value="3" min="1" max="100"></div>
+    <div class="row-inline"><label>Tau:</label>
+      <input type="number" id="tauInput" value="1.1" step="0.05" min="0"></div>
+    <div class="row-inline"><label>Exponent:</label>
+      <input type="number" id="expInput" value="10" step="0.5" min="0.1"></div>
+    <div class="row-inline">
+      <label>Invert:</label>
+      <input type="checkbox" id="invertCheck" checked>
+    </div>
+    <div class="row-inline"><label>Final time:</label>
+      <input type="number" id="finalTimeInput" value="18" step="1" min="0.1"></div>
+    <div class="row-inline"><label>Integration steps:</label>
+      <input type="number" id="maxStepsInput" value="720" step="120" min="10"></div>
+    <div class="row-inline"><label>Intermediate frames:</label>
+      <input type="number" id="snapInput" value="12" min="0" max="200">
+      <span class="help-text">0 = only final result</span></div>
+    <div class="row">
+      <button id="runBtn">mooijfy!</button>
+      <button id="saveBtn" type="button" class="secondary">Save Figure</button>
+    </div>
+  </div>
+
+  <div class="dropzone" id="dropzone">Drag an image here</div>
+  <div class="status" id="status">Loading&hellip;</div>
+  <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-text" id="progressText"></div>
+
+  <canvas id="inputCanvas" width="440" height="330"></canvas>
+  <canvas id="outputCanvas" width="700" height="520"></canvas>
+  <div class="cbwrap"><span id="cbLo">0</span>
+    <div class="colorbar" id="colorbar"></div><span id="cbHi">1</span></div>
+
+  <div class="panel" style="margin-top:20px">
+    <div class="row"><button id="submitBtn" type="button">Share</button></div>
+  </div>
+
+  <div class="panel">
+    <h2>Gallery</h2>
+    <div class="status" id="galleryStatus">Loading gallery&hellip;</div>
+    <div class="gallery" id="gallery"></div>
+  </div>
+
+  <div class="footer">
+    <span>Translated from Matlab with <strong>Lumo AI</strong></span>
+    <span class="ref">
+      For the algorithm see
+      <a href="https://www.nature.com/articles/s42005-025-02153-7" target="_blank" rel="noopener">
+        Niek's paper, <em>Commun. Phys.</em> <strong>8</strong>, 235 (2025)</a>.
+      <br/>
+      The reason behind why the snake-like patterns appear is explained in 
+      <a href="https://studenttheses.uu.nl/items/26f24833-b7a6-4810-b185-67ef2e4fa453" target="_blank" rel="noopener">
+          Willem Kalkman  <em>Thesis</em> (2025)</a>.
+      
+    </span>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <img id="lbImg" alt="">
+  <div class="lbcap" id="lbCap"></div>
+</div>
+
+<script id="workerSrc" type="text/plain">
+var PARULA = [
+  [0.00,  53,  42, 135],[0.07,  31,  63, 156],[0.15,  18,  89, 171],
+  [0.24,  10, 115, 173],[0.34,   9, 141, 157],[0.45,  28, 162, 126],
+  [0.56,  74, 178,  90],[0.67, 133, 190,  51],[0.78, 192, 199,  25],
+  [0.88, 231, 216,  16],[0.95, 246, 238,  11],[1.00, 248, 253,   7]
+];
+function post(m) { self.postMessage(m); }
+function deriv(y, out, n, nA, mA, tau) {
+  for (var i = 0; i < n; i++) {
+    var row = (i / nA) | 0, col = i - row * nA, s = 0;
+    if (row > 0) s += y[i - nA];
+    if (row < mA - 1) s += y[i + nA];
+    if (col > 0) s += y[i - 1];
+    if (col < nA - 1) s += y[i + 1];
+    out[i] = y[i] - y[i] * (tau * s + y[i]);
+  }
+}
+self.onmessage = function (ev) {
+  var d = ev.data, t0 = performance.now();
+  try {
+    var skip = d.skip, tau = d.tau, T = d.finalTime, steps = d.maxSteps, exponent = d.exponent, invert = !!d.invert;
+    var w = d.width, h = d.height, px = d.pixels;
+    post({ type: 'progress', pct: 2, label: 'Grayscale' });
+    var gray = new Float64Array(w * h);
+    for (var p = 0, i = 0; i < gray.length; i++, p += 4)
+      gray[i] = 0.299 * px[p] + 0.587 * px[p + 1] + 0.114 * px[p + 2];
+    var mA = Math.floor((h - 1) / skip) + 1, nA = Math.floor((w - 1) / skip) + 1;
+    post({ type: 'progress', pct: 5, label: 'Downsampling to ' + mA + ' x ' + nA });
+    var A = new Float64Array(mA * nA), mx = 0;
+    for (var r = 0; r < mA; r++) {
+      var sy = Math.min(r * skip, h - 2), y0 = sy | 0, fy = sy - y0, y1 = y0 + 1;
+      for (var c = 0; c < nA; c++) {
+        var sx = Math.min(c * skip, w - 2), x0 = sx | 0, fx = sx - x0, x1 = x0 + 1;
+        var v = gray[y0 * w + x0] * (1 - fx) * (1 - fy) + gray[y0 * w + x1] * fx * (1 - fy) +
+                gray[y1 * w + x0] * (1 - fx) * fy + gray[y1 * w + x1] * fx * fy;
+        A[r * nA + c] = v; if (v > mx) mx = v;
+      }
+    }
+    var n = mA * nA, y = new Float64Array(n);
+    for (var k = 0; k < n; k++) {
+      var norm = mx > 0 ? A[k] / mx : 0, init = invert ? (1 - norm) : norm;
+      y[k] = Math.pow(init, exponent);
+    }
+    post({ type: 'progress', pct: 8, label: 'Integrating' });
+    var dt = T / steps, k1 = new Float64Array(n), k2 = new Float64Array(n),
+        k3 = new Float64Array(n), k4 = new Float64Array(n), tmp = new Float64Array(n);
+    var blown = false, reportEvery = Math.max(1, Math.floor(steps / 60));
+
+    var nSnap = d.snapshots | 0;
+    var snapEvery = nSnap > 0 ? Math.max(1, Math.floor(steps / nSnap)) : 0;
+    var lastSnapMs = 0;
+
+    for (var s = 0; s < steps; s++) {
+      deriv(y, k1, n, nA, mA, tau);
+      for (var a = 0; a < n; a++) tmp[a] = y[a] + 0.5 * dt * k1[a];
+      deriv(tmp, k2, n, nA, mA, tau);
+      for (var b = 0; b < n; b++) tmp[b] = y[b] + 0.5 * dt * k2[b];
+      deriv(tmp, k3, n, nA, mA, tau);
+      for (var c2 = 0; c < n; c2++) tmp[c2] = y[c2] + dt * k3[c2];
+      deriv(tmp, k4, n, nA, mA, tau);
+      for (var q = 0; q < n; q++) {
+        y[q] += (dt / 6) * (k1[q] + 2 * k2[q] + 2 * k3[q] + k4[q]);
+        if (!isFinite(y[q])) { blown = true; break; }
+      }
+      if (blown) break;
+
+      if (snapEvery && s % snapEvery === 0 && s < steps - 1) {
+        var now = performance.now();
+        if (now - lastSnapMs > 33) {
+          lastSnapMs = now;
+          var copy = new Float64Array(y);
+          post({ type: 'frame', Z: copy, M: mA, N: nA,
+                 step: s + 1, steps: steps, t: (s + 1) * dt }, [copy.buffer]);
+        }
+      }
+
+      if (s % reportEvery === 0 || s === steps - 1)
+        post({ type: 'progress', pct: 8 + 91 * (s + 1) / steps, label: 'Step ' + (s + 1) + '/' + steps });
+    }
+    post({ type: 'result', ok: true, Z: y, M: mA, N: nA, ms: performance.now() - t0, blown: blown, parula: PARULA }, [y.buffer]);
+  } catch (err) { post({ type: 'result', ok: false, error: err.message + '\n' + err.stack }); }
+};
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var RECIPIENT_EMAIL = 'mooijfy@protonmail.ch';
+  var CFG = { niekPath: 'Niek.jpg', imgDir: 'imgs', manifest: 'imgs/gallery.json', captions: 'imgs/captions.json' };
+  var CAN_FETCH = location.protocol !== 'file:';
+  var worker = null, CMAP = null, lastResult = null;
+  var normLo = Infinity, normHi = -Infinity;
+
+  function $(id) { return document.getElementById(id); }
+  function setStatus(m) { $('status').innerHTML = m; }
+
+  function setProgress(pct, label) {
+    var wrap = $('progressWrap');
+    if (pct == null) { wrap.classList.remove('active'); $('progressText').textContent = ''; return; }
+    wrap.classList.add('active');
+    $('progressFill').style.width = Math.max(0, Math.min(100, pct)) + '%';
+    $('progressText').textContent = label || '';
+  }
+
+  function buildCmap(stops) { CMAP = stops.map(function (s) { return s.slice(); }); }
+  function colorAt(v) {
+    v = v < 0 ? 0 : v > 1 ? 1 : v;
+    var i = 0;
+    while (i < CMAP.length - 2 && v > CMAP[i + 1][0]) i++;
+    var a = CMAP[i], b = CMAP[i + 1];
+    var t = (v - a[0]) / ((b[0] - a[0]) || 1);
+    return [Math.round(a[1] + t * (b[1] - a[1])), Math.round(a[2] + t * (b[2] - a[2])), Math.round(a[3] + t * (b[3] - a[3]))];
+  }
+
+  function drawColorbar() {
+    var stops = [];
+    for (var i = 0; i <= 20; i++) {
+      var c = colorAt(i / 20);
+      stops.push('rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ') ' + (i * 5) + '%');
+    }
+    $('colorbar').style.background = 'linear-gradient(to right,' + stops.join(',') + ')';
+  }
+
+  function renderZ(Z, M, N) {
+    var cv = $('outputCanvas'), ctx = cv.getContext('2d');
+    var scale = Math.max(1, Math.min(8, Math.floor(760 / N)));
+    if (cv.width !== N * scale || cv.height !== M * scale) { cv.width = N * scale; cv.height = M * scale; }
+    for (var i = 0; i < Z.length; i++) { if (Z[i] < normLo) normLo = Z[i]; if (Z[i] > normHi) normHi = Z[i]; }
+    var range = (normHi - normLo) || 1;
+    var buf = ctx.createImageData(N, M);
+    for (var p = 0; p < Z.length; p++) {
+      var c = colorAt((Z[p] - normLo) / range), o = p * 4;
+      buf.data[o] = c[0]; buf.data[o + 1] = c[1]; buf.data[o + 2] = c[2]; buf.data[o + 3] = 255;
+    }
+    var off = document.createElement('canvas'); off.width = N; off.height = M;
+    off.getContext('2d').putImageData(buf, 0, 0);
+    ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(off, 0, 0, N, M, 0, 0, cv.width, cv.height);
+    $('cbLo').textContent = normLo.toFixed(3); $('cbHi').textContent = normHi.toFixed(3);
+  }
+
+  function pixelsReadable() { try { $('inputCanvas').getContext('2d').getImageData(0, 0, 1, 1); return true; } catch (e) { return false; } }
+  function drawIntoCanvas(im, note) {
+    var cv = $('inputCanvas'), MAX = 1400;
+    var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+    if (Math.max(w, h) > MAX) { var k = MAX / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+    cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(im, 0, 0, w, h);
+    if (!pixelsReadable()) { setStatus('<span style="color:#b3261e">Pixels cannot be read.</span>'); return false; }
+    setStatus((note ? note + ' &mdash; ' : '') + 'loaded ' + w + '&times;' + h + '. Ready to run.');
+    return true;
+  }
+
+  function loadFromFile(file) {
+    var fr = new FileReader();
+    fr.onload = function (evt) { var im = new Image(); im.onload = function () { drawIntoCanvas(im, file.name); }; im.src = evt.target.result; };
+    fr.readAsDataURL(file);
+  }
+
+  function loadFromPath(path, note) {
+    return new Promise(function (resolve, reject) {
+      var im = new Image(); im.onload = function () { resolve(drawIntoCanvas(im, note)); };
+      im.onerror = function () { reject(new Error('could not load ' + path)); };
+      im.src = path;
+    });
+  }
+
+  function pickFile() { var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.onchange = function () { if (inp.files && inp.files[0]) loadFromFile(inp.files[0]); }; inp.click(); }
+
+  function ensureWorker() {
+    if (worker) return worker;
+    var url = URL.createObjectURL(new Blob([$('workerSrc').textContent], { type: 'text/javascript' }));
+    worker = new Worker(url); worker.onmessage = onWorkerMessage;
+    worker.onerror = function (e) { setStatus('Worker error: ' + (e.message || 'unknown')); setProgress(null); busy(false); };
+    return worker;
+  }
+
+  function busy(state) { ['runBtn','niekBtn','imageInput','saveBtn','submitBtn'].forEach(function (id) { $(id).disabled = state; }); }
+
+  function runSimulation() {
+    var inC = $('inputCanvas'); if (!inC.width || !inC.height) { setStatus('No image loaded yet.'); return; }
+    var skip = parseInt($('skipInput').value, 10), tau = parseFloat($('tauInput').value), exponent = parseFloat($('expInput').value);
+    var invert = $('invertCheck').checked, finalTime = parseFloat($('finalTimeInput').value), maxSteps = parseInt($('maxStepsInput').value, 10);
+    var snapshots = parseInt($('snapInput').value, 10) || 0;
+    if (!(skip >= 1) || !isFinite(tau) || !(exponent > 0) || !(finalTime > 0) || !(maxSteps >= 1)) { setStatus('Invalid parameters.'); return; }
+    var pixels; try { pixels = inC.getContext('2d').getImageData(0, 0, inC.width, inC.height).data; } catch (err) { setStatus('Canvas tainted.'); return; }
+    var mA = Math.floor((inC.height - 1) / skip) + 1, nA = Math.floor((inC.width - 1) / skip) + 1;
+    normLo = Infinity; normHi = -Infinity;
+    busy(true); setProgress(0, 'Starting...');
+    setStatus('Running &mdash; grid ' + mA + '&times;' + nA + ', tau=' + tau + ', exp=' + exponent);
+    ensureWorker().postMessage({ skip: skip, tau: tau, finalTime: finalTime, maxSteps: maxSteps, exponent: exponent, invert: invert, width: inC.width, height: inC.height, pixels: pixels, snapshots: snapshots }, [pixels.buffer]);
+  }
+
+  function onWorkerMessage(e) {
+    var d = e.data;
+    if (d.type === 'progress') { setProgress(d.pct, d.label); return; }
+    if (d.type === 'frame') {
+      renderZ(d.Z, d.M, d.N);
+      setProgress(8 + 87 * d.step / d.steps, 't = ' + d.t.toFixed(2) + ' (step ' + d.step + '/' + d.steps + ')');
+      return;
+    }
+    if (d.type !== 'result') return;
+    busy(false);
+    if (!d.ok) { setProgress(null); setStatus('Error: ' + d.error); return; }
+    if (d.parula) { buildCmap(d.parula); drawColorbar(); }
+    setProgress(100, 'Rendering...');
+    lastResult = { Z: d.Z, M: d.M, N: d.N };
+    renderZ(d.Z, d.M, d.N);
+    setStatus((d.blown ? '\u26a0 Diverged &mdash; increase steps. ' : 'Done. ') + d.M + '&times;' + d.N + ' &bull; ' + Math.round(d.ms) + ' ms');
+    setTimeout(function () { setProgress(null); }, 300);
+  }
+
+  function canvasToBlob(cv) { return new Promise(function (resolve) { if (cv.toBlob) cv.toBlob(function (b) { resolve(b); }, 'image/png'); else { var d = cv.toDataURL('image/png'), bin = atob(d.split(',')[1]), arr = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); resolve(new Blob([arr], { type: 'image/png' })); } }); }
+  function downloadBlob(blob, filename) { var url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 4000); }
+  function saveFigure() { if (!lastResult) { setStatus('Run mooijfy first!'); return; } canvasToBlob($('outputCanvas')).then(function (blob) { downloadBlob(blob, 'mooijfy_result.png'); setStatus('Saved as mooijfy_result.png'); }); }
+
+  var USE_SHARE_SHEET = true;
+
+  function submitToGallery() {
+    if (!lastResult) { setStatus('Run mooijfy first.'); return; }
+    var fname = 'mooijfy_result.png';
+    var subject = 'mooijfy gallery submission';
+    var body = 'Look at this mooijfied image!\n To submit to the gallery, email to mooijfy@protonmail.ch with a name/comment. Make sure the image size is chosen to be Large or Actual size.';
+
+    canvasToBlob($('outputCanvas')).then(function (blob) {
+      if (USE_SHARE_SHEET) {
+        var file = null;
+        try { file = new File([blob], fname, { type: 'image/png' }); } catch (e) {}
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({ files: [file], title: subject, text: body })
+            .then(function () { setStatus('Shared with your mail app.'); })
+            .catch(function (err) {
+              if (err && err.name === 'AbortError') return;
+              sendByEmail(blob, fname, subject, body);
+            });
+          return;
+        }
+      }
+      sendByEmail(blob, fname, subject, body);
+    });
+  }
+
+  function sendByEmail(blob, fname, subject, body) {
+    downloadBlob(blob, fname);
+    window.location.href = 'mailto:' + RECIPIENT_EMAIL +
+      '?subject=' + encodeURIComponent(subject) +
+      '&body='    + encodeURIComponent(body);
+    setStatus('Saved <strong>' + fname + '</strong> \u2014 attach it to the ' +
+              'email that just opened.');
+  }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
+  function imageUrl(item) { if (item.url) return item.url; var f = item.file; if (/^(https?:|data:|blob:|\/)/i.test(f)) return f; return CFG.imgDir.replace(/\/+$/, '') + '/' + f.replace(/^\/+/, ''); }
+  function normalizeManifest(data) { var arr = Array.isArray(data) ? data : (data && (data.images || data.items)) || []; return arr.map(function (it) { if (typeof it === 'string') return { file: it, name: '', comment: '' }; return { file: it.file || '', url: it.url || '', name: it.name || '', comment: it.comment || '' }; }).filter(function (it) { return it.file || it.url; }); }
+  function renderGallery(items) { var host = $('gallery'); host.innerHTML = ''; items.forEach(function (it) { var fig = document.createElement('figure'); fig.className = 'gitem'; var img = document.createElement('img'); img.loading = 'lazy'; img.src = imageUrl(it); img.addEventListener('click', function () { openLightbox(it, img.src); }); fig.appendChild(img); if (it.name || it.comment) { var cap = document.createElement('figcaption'); if (it.name) { var b = document.createElement('strong'); b.textContent = it.name; cap.appendChild(b); } if (it.comment) { var s = document.createElement('span'); s.textContent = it.comment; cap.appendChild(s); } fig.appendChild(cap); } host.appendChild(fig); }); }
+  function openLightbox(item, src) { $('lbImg').src = src; $('lbCap').textContent = (item.name ? item.name : '') + (item.comment ? ' - ' + item.comment : ''); $('lightbox').classList.add('open'); }
+  function loadGallery() { var st = $('galleryStatus'); fetch(CFG.manifest, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('not found'); return r.json(); }).then(function (data) { var items = normalizeManifest(data); return fetch(CFG.captions, { cache: 'no-store' }).then(function (cr) { return cr.ok ? cr.json() : {}; }).catch(function () { return {}; }).then(function (caps) { if (Object.keys(caps).length) { items.forEach(function (it) { var c = caps[it.file || ''] || {}; it.name = it.name || c.name || ''; it.comment = it.comment || c.caption || c.comment || ''; }); } return items; }); }).then(function (items) { if (!items || !items.length) { st.innerHTML = 'No images in <code>' + esc(CFG.manifest) + '</code>'; return; } renderGallery(items); st.textContent = items.length + ' image(s) in gallery.'; }).catch(function () { st.innerHTML = 'Could not load ' + esc(CFG.manifest); }); }
+
+  $('imageInput').addEventListener('change', function (e) { if (e.target.files && e.target.files[0]) loadFromFile(e.target.files[0]); });
+  $('niekBtn').addEventListener('click', function () { if (CAN_FETCH) { loadFromPath(CFG.niekPath, CFG.niekPath).catch(function () { pickFile(); }); } else { pickFile(); } });
+  $('runBtn').addEventListener('click', runSimulation);
+  $('saveBtn').addEventListener('click', saveFigure);
+  $('submitBtn').addEventListener('click', submitToGallery);
+  $('lightbox').addEventListener('click', function () { this.classList.remove('open'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('lightbox').classList.remove('open'); });
+  document.addEventListener('drop', function (e) { e.preventDefault(); var f = e.dataTransfer && e.dataTransfer.files[0]; if (f && /^image\//.test(f.type)) loadFromFile(f); });
+  document.addEventListener('dragover', function (e) { e.preventDefault(); });
+
+  var paramInputs = [
+    $('skipInput'), $('tauInput'), $('expInput'),
+    $('finalTimeInput'), $('maxStepsInput'), $('snapInput')
+  ];
+
+  paramInputs.forEach(function (inp) {
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.keyCode === 13) {
+        e.preventDefault();
+        runSimulation();
+      }
+    });
+  });
+  
+  buildCmap([[0.00,53,42,135],[0.09,27,70,160],[0.19,15,101,175],[0.30,9,130,166],[0.41,18,155,139],[0.52,55,173,106],[0.63,108,186,66],[0.74,166,196,32],[0.84,214,211,19],[0.93,240,232,13],[1.00,248,253,7]]);
+  drawColorbar();
+
+  function seedTestImage() { var cv = $('inputCanvas'), ctx = cv.getContext('2d'), w = cv.width, h = cv.height, img = ctx.createImageData(w, h); for (var y = 0; y < h; y++) { for (var x = 0; x < w; x++) { var o = (y * w + x) * 4, cx = w / 2, cy = h * 0.54, headR = Math.min(w, h) * 0.17, inHead = (x - cx) * (x - cx) + (y - cy) * (y - cy) < headR * headR, inBody = y > cy + headR * 0.6 && Math.abs(x - cx) < (y - cy) * 0.68, v = (inHead || inBody) ? 225 : 30; img.data[o] = img.data[o + 1] = img.data[o + 2] = v; img.data[o + 3] = 255; } } ctx.putImageData(img, 0, 0); }
+
+  if (CAN_FETCH) { loadFromPath(CFG.niekPath, CFG.niekPath).catch(function () { seedTestImage(); setStatus('"' + CFG.niekPath + '" not found.'); }); } else { seedTestImage(); setStatus('file:// mode. Drag image or use picker.'); }
+  loadGallery();
+})();
+</script>
+</body>
+</html>
